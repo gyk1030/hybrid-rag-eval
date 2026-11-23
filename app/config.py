@@ -3,14 +3,61 @@
 ``app/retrieval`` 下的各模块只从本文件读取参数——数据库连接、模型与数据路径、
 批大小、召回/融合/精排的默认条数——不再各自定义常量；调参只需要改这里一处。
 
-需要随环境变化的项支持环境变量覆盖，例如把 ``RAG_PG_DSN`` 指向另一套库::
+需要随环境变化的项支持两种注入方式（都可，优先环境变量）：
 
-    $env:RAG_PG_DSN = "postgresql://user:pass@host:5432/other"
+1. 环境变量，例如把 ``RAG_PG_DSN`` 指向另一套库::
+
+       $env:RAG_PG_DSN = "postgresql://user:pass@host:5432/other"
+
+2. 项目根目录（``backend/``）下的 ``.env`` 文件，适合放本地数据库口令::
+
+       RAG_PG_DSN=postgresql://postgres:123456@localhost:5432/rag
+
+   ``.env`` 已在 ``.gitignore`` 里，不会进版本库；把 ``.env.example``
+   复制成 ``.env`` 再改即可。这里只做极简解析（``KEY=VALUE``），不引入额外依赖，
+   且**不覆盖已存在的环境变量**。
 """
 
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+# config.py 位于 app/ 下，上一级就是项目根（backend/）
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_dotenv(path: Path | str) -> int:
+    """把 ``KEY=VALUE`` 逐行读进 ``os.environ``，返回实际注入的条目数。
+
+    规则与常见实现保持一致：跳过空行与 ``#`` 注释、去掉值两端的引号、
+    已存在的环境变量不覆盖（命令行/系统变量优先）。
+    """
+    target = Path(path)
+    if not target.is_file():
+        return 0
+
+    injected = 0
+    for raw_line in target.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export ") :].strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        if key and key not in os.environ:
+            os.environ[key] = value
+            injected += 1
+    return injected
+
+
+# 先读 .env（项目根目录优先，其次当前工作目录），再读取下面的常量
+for _candidate in (PROJECT_ROOT / ".env", Path.cwd() / ".env"):
+    load_dotenv(_candidate)
 
 # --------------------------------------------------------------------------- #
 # 数据库
@@ -18,7 +65,7 @@ import os
 # vector_store（写入/向量检索）与 bm25_index（词法检索）共用同一个库，
 # 库中需要已安装 pgvector 扩展。
 #
-# 默认值只是占位符：真实密码一律通过环境变量 RAG_PG_DSN 注入，不要写进代码。
+# 默认值只是占位符：真实密码放在环境变量或 .env 里，不要写进代码。
 DSN = os.environ.get("RAG_PG_DSN", "postgresql://postgres:postgres@localhost:5432/rag")
 
 # --------------------------------------------------------------------------- #

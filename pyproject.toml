@@ -1,0 +1,42 @@
+[project]
+name = "hybrid-rag-eval"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "fastapi>=0.163.1",
+    "flagembedding>=1.4.2",
+    "jieba>=0.42.1",
+    "openpyxl>=3.1.5",
+    "pdfplumber>=0.11.10",
+    "psycopg2>=2.9.13",
+    "pydantic>=2.14.3",
+    "pymupdf>=1.28.2",
+    "rank-bm25>=0.2.2",
+    "requests>=2.34.2",
+    "torch>=2.14.1",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+hybrid-rag-eval = "hybrid_rag_eval:main"
+
+[build-system]
+requires = ["uv_build>=0.13.3,<0.14.0"]
+build-backend = "uv_build"
+
+# PyPI 上 Windows + Python 3.15 的 torch 是 CPU-only 构建，必须显式指向
+# PyTorch 官方 CUDA 源，否则 uv sync 会把显卡版覆盖回 CPU 版。
+#
+# marker 的作用：uv 生成的是「全平台通用」的 lock 文件，会按
+# sys_platform 分叉解析。cu126 源里没有 macOS 的轮子，若不限制平台，
+# uv lock 会在 darwin 分叉上报 "No solution found"。macOS 上没有 CUDA，
+# 让它回落到 PyPI 的默认构建即可；Windows / Linux 走 CUDA 源。
+[tool.uv.sources]
+torch = { index = "pytorch-cu126", marker = "sys_platform != 'darwin'" }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true

@@ -1,0 +1,232 @@
+[
+  {
+    "question": "平安银行的全资子公司平安理财有限责任公司的注册资本是多少？",
+    "ground_truth": "人民币 5,000 百万元",
+    "relevant_chunk_ids": [
+      "8561144288e31ff5_p178_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_001"
+  },
+  {
+    "question": "当贷款合同修改导致合同现金流量发生实质性变化时，平安银行将上述合同修改日期作为什么日期？",
+    "ground_truth": "初始确认日期",
+    "relevant_chunk_ids": [
+      "77d98b2636f31c0a_p148_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_002"
+  },
+  {
+    "question": "根据平安银行 2025 年年度报告第 140 页原文，由本集团自身信用风险变动引起的该金融负债公允价值的变动金额应计入哪个科目？",
+    "ground_truth": "其他综合收益",
+    "relevant_chunk_ids": [
+      "2273565ecbe1b325_p140_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_003"
+  },
+  {
+    "question": "本集团成熟生产性生物资产计提折旧的方法是什么？",
+    "ground_truth": "年限平均法",
+    "relevant_chunk_ids": [
+      "511a089558610e86_p171_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_004"
+  },
+  {
+    "question": "张懿宸先生于 1987 年至 2000 年先后就职于哪些公司？",
+    "ground_truth": "格林威治资本市场公司、东京银行纽约分部、美林证券",
+    "relevant_chunk_ids": [
+      "734370d32036c1a1_p086_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_005"
+  },
+  {
+    "question": "郭训平承诺自本次交易实施完毕之日起 60 个月内，本承诺人持有国农科技股票的上限是多少？",
+    "ground_truth": "通过本次交易获得的上市公司股份数以及因国农科技实施分配股利、资本公积金转增股本、配股、股权激励等事项所派生的股份数之和",
+    "relevant_chunk_ids": [
+      "7c5ef89bceacd16d_p063_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_006"
+  },
+  {
+    "question": "2023 年末，平安银行个人贷款不良率是多少？",
+    "ground_truth": "1.37%",
+    "relevant_chunk_ids": [
+      "8561144288e31ff5_p037_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_007"
+  },
+  {
+    "question": "2025 年末，平安银行对公房地产贷款不良率是多少？",
+    "ground_truth": "2.22%",
+    "relevant_chunk_ids": [
+      "2273565ecbe1b325_p054_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_008"
+  },
+  {
+    "question": "2025 相对 2024年，平安银行对公房地产贷款不良率是上升还是下降，具体相差多少百分比？",
+    "ground_truth": "上升 0.43 个百分点（2024 年末 1.79% → 2025 年末 2.22%）。原文：较上年末上升0.43个百分点",
+    "relevant_chunk_ids": [
+      "2273565ecbe1b325_p054_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_009"
+  },
+  {
+    "question": "万科 A 在 2024 年年度报告中关于业务独立性的描述里，提到上市公司独立拥有哪些要素？",
+    "ground_truth": "独立拥有开展经营活动的资产、人员、资质以及具有独立面向市场自主经营的能力",
+    "relevant_chunk_ids": [
+      "734370d32036c1a1_p101_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_010"
+  },
+  {
+    "question": "国华网安自研的“数据与个人信息合规智探大模型一体机”具备哪些能力？",
+    "ground_truth": "具备强大的自然语言理解和生成能力，能够处理多种复杂的语言任务，如智能对话、文本生成、语义理解等，实现个人信息合规的智能化高效检测及合规知识库的快速赋能。",
+    "relevant_chunk_ids": [
+      "0c391dfed99f7d2b_p020_b004"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_011"
+  },
+  {
+    "question": "2023 年末平安银行的资产总额是多少？",
+    "ground_truth": "55,871.16 亿元",
+    "relevant_chunk_ids": [
+      "8561144288e31ff5_p006_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_012"
+  },
+  {
+    "question": "平安银行 2025 年 12 月 31 日人民币存款准备金缴存比率是多少？",
+    "ground_truth": "5.5%",
+    "relevant_chunk_ids": [
+      "2273565ecbe1b325_p158_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_013"
+  },
+  {
+    "question": "2024 年万科 A 集团全年共完成多少个项目三维可视化建模？",
+    "ground_truth": "169 个项目",
+    "relevant_chunk_ids": [
+      "734370d32036c1a1_p028_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_014"
+  },
+  {
+    "question": "国华网安 2024 年年度报告中，信用风险主要产生于哪些资产？",
+    "ground_truth": "信用风险主要产生于银行存款、应收票据、应收账款、其他应收款等。",
+    "relevant_chunk_ids": [
+      "0c391dfed99f7d2b_p175_b003"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_015"
+  },
+  {
+    "question": "2024 年度，平安银行通过信贷资产证券化和收益权转让终止确认贷款共计多少人民币？",
+    "ground_truth": "人民币 19,432 百万元",
+    "relevant_chunk_ids": [
+      "77d98b2636f31c0a_p169_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_016"
+  },
+  {
+    "question": "2025 年末，平安银行财富管理服务信托客户数量是多少万户？",
+    "ground_truth": "4.43 万户",
+    "relevant_chunk_ids": [
+      "2273565ecbe1b325_p044_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_017"
+  },
+  {
+    "question": "根据万科 A 2023 年年度报告第 161 页，金融资产转移整体满足终止确认条件时，计入当期损益的两项金额分别是哪两项？",
+    "ground_truth": "被转移金融资产在终止确认日的账面价值；因转移金融资产而收到的对价",
+    "relevant_chunk_ids": [
+      "511a089558610e86_p161_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_018"
+  },
+  {
+    "question": "2021-2024 年住宅物业换手率由多少持续提升至多少？",
+    "ground_truth": "1.7%持续提升至3.3%",
+    "relevant_chunk_ids": [
+      "734370d32036c1a1_p015_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_019"
+  },
+  {
+    "question": "在编制财务报表时，管理层负责评估国华网安公司的哪项能力？",
+    "ground_truth": "持续经营能力",
+    "relevant_chunk_ids": [
+      "7c5ef89bceacd16d_p084_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_020"
+  },
+  {
+    "question": "国华网安 2024 年年度报告中，管理层是否采取了利率对冲政策？",
+    "ground_truth": "本公司目前并未采取利率对冲政策。",
+    "relevant_chunk_ids": [
+      "0c391dfed99f7d2b_p176_b003"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_021"
+  },
+  {
+    "question": "冀光恒先生在平安银行担任什么职务？",
+    "ground_truth": "执行董事、行长",
+    "relevant_chunk_ids": [
+      "8561144288e31ff5_p066_b002"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_022"
+  },
+  {
+    "question": "平安银行 2024 年年度报告中，对公业务经营策略包含哪三个‘做精’？",
+    "ground_truth": "做精行业、做精客户、做精产品",
+    "relevant_chunk_ids": [
+      "77d98b2636f31c0a_p013_b001"
+    ],
+    "source": "llm",
+    "reviewed": false,
+    "id": "gs_023"
+  }
+]

@@ -1,0 +1,520 @@
+[
+  {
+    "id": "gs_001",
+    "chunk_id": "8561144288e31ff5_p178_b002",
+    "question": "平安银行的全资子公司平安理财有限责任公司的注册资本是多少？",
+    "ground_truth": "人民币 5,000 百万元",
+    "source": "000001_平安银行_2023年年度报告.pdf",
+    "page": 178,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到平安理财有限责任公司的注册资本为人民币 5,000 百万元，与标准答案一致；问题中的公司名称和年份在原文中均有对应信息。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_002",
+    "chunk_id": "77d98b2636f31c0a_p148_b001",
+    "question": "当贷款合同修改导致合同现金流量发生实质性变化时，平安银行将上述合同修改日期作为什么日期？",
+    "ground_truth": "初始确认日期",
+    "source": "000001_平安银行_2024年年度报告.pdf",
+    "page": 148,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'本集团将上述合同修改日期作为初始确认日期'，足以回答问题且答案一致；文件年份与问题中的平安银行 2024 年年度报告相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_003",
+    "chunk_id": "2273565ecbe1b325_p140_b002",
+    "question": "根据平安银行 2025 年年度报告第 140 页原文，由本集团自身信用风险变动引起的该金融负债公允价值的变动金额应计入哪个科目？",
+    "ground_truth": "其他综合收益",
+    "source": "000001_平安银行_2025年年度报告.pdf",
+    "page": 140,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到由本集团自身信用风险变动引起的该金融负债公允价值的变动金额应计入其他综合收益，与标准答案一致；问题中提到的平安银行 2025 年年度报告第 140 页与文件字段信息相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_004",
+    "chunk_id": "77d98b2636f31c0a_p148_b001",
+    "question": "当贷款合同修改导致合同现金流量发生实质性变化时，本集团如何确定对修改后的金融资产应用减值要求时的初始确认日期？",
+    "ground_truth": "本集团将上述合同修改日期作为初始确认日期。",
+    "source": "000001_平安银行_2024年年度报告.pdf",
+    "page": 148,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'本集团将上述合同修改日期作为初始确认日期'，与标准答案完全一致；原文包含年份信息（2024 年），与文件元数据一致；问题未提及具体公司名或页码，故 entity_ok 记为 1。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_005",
+    "chunk_id": "511a089558610e86_p171_b002",
+    "question": "本集团成熟生产性生物资产计提折旧的方法是什么？",
+    "ground_truth": "年限平均法",
+    "source": "000002_万  科Ａ_2023年年度报告.pdf",
+    "page": 171,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'按照年限平均法计提折旧'，与标准答案一致；问题中的年份和页码在原文中未提及，故 entity_ok 记为 1。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_006",
+    "chunk_id": "734370d32036c1a1_p086_b001",
+    "question": "张懿宸先生于 1987 年至 2000 年先后就职于哪些公司？",
+    "ground_truth": "格林威治资本市场公司、东京银行纽约分部、美林证券",
+    "source": "000002_万科A_2024年年度报告.pdf",
+    "page": 86,
+    "rule_problems": [
+      "答案文本未原样出现在原文中（需模型判断）"
+    ],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确列出了张懿宸先生于 1987 年至 2000 年就职的三家公司，与标准答案完全一致；文件年份（2024 年）与问题中提到的年份（1987-2000）无冲突，且问题未提及具体页码，故 entity_ok 为 1。"
+    },
+    "verdict": "suspect"
+  },
+  {
+    "id": "gs_007",
+    "chunk_id": "7c5ef89bceacd16d_p063_b001",
+    "question": "郭训平承诺自本次交易实施完毕之日起 60 个月内，本承诺人持有国农科技股票的上限是多少？",
+    "ground_truth": "通过本次交易获得的上市公司股份数以及因国农科技实施分配股利、资本公积金转增股本、配股、股权激励等事项所派生的股份数之和",
+    "source": "000004_国华网安_2023年年度报告.pdf",
+    "page": 63,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确给出了郭训平持有的股票上限定义，与标准答案完全一致；文件年份、页码及承诺人姓名均与问题及标注信息相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_008",
+    "chunk_id": "0c391dfed99f7d2b_p174_b001",
+    "question": "国华网安 2024 年年度报告中关于计入当期损益的政府补助的说明是否适用？",
+    "ground_truth": "适用",
+    "source": "000004_国华网安_2024年年度报告.pdf",
+    "page": 174,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确列出了'计入当期损益的政府补助'选项，并勾选了'适用'，足以回答问题且答案一致；文件名称、年份及页码信息均与问题及标注一致。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_009",
+    "chunk_id": "8561144288e31ff5_p037_b002",
+    "question": "2023 年末，平安银行个人贷款不良率是多少？",
+    "ground_truth": "1.37%",
+    "source": "000001_平安银行_2023年年度报告.pdf",
+    "page": 37,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提及'2023 年末，本行个人贷款不良率 1.37%'，足以回答问题且答案一致；问题中的年份与文件内容相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_010",
+    "chunk_id": "77d98b2636f31c0a_p184_b001",
+    "question": "平安银行 2024 年资产负债表中确认的本集团使用权资产原值年末余额是多少？",
+    "ground_truth": "年末余额",
+    "source": "000001_平安银行_2024年年度报告.pdf",
+    "page": 184,
+    "rule_problems": [],
+    "model": {
+      "ok": false,
+      "answerable": 1,
+      "answer_matches": 0,
+      "entity_ok": 1,
+      "reason": "原文仅列出了表头，未提供具体的数值数据，无法回答具体金额；标准答案仅重复了“年末余额”四个字，未包含任何数值，与原文信息不匹配。"
+    },
+    "verdict": "suspect"
+  },
+  {
+    "id": "gs_011",
+    "chunk_id": "2273565ecbe1b325_p054_b002",
+    "question": "2025 年末，平安银行对公房地产贷款不良率是多少？",
+    "ground_truth": "2.22%",
+    "source": "000001_平安银行_2025年年度报告.pdf",
+    "page": 54,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'2025 年末，本行对公房地产贷款不良率 2.22%'，足以回答问题且答案一致；文件年份与问题年份一致，无需额外校验。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_012",
+    "chunk_id": "511a089558610e86_p245_b001",
+    "question": "2022 年万科 A 银行借款中，人民币信用借款的利率范围是多少？",
+    "ground_truth": "2.90% ~ 以同期香港同业拆借利率 (Hibor) 按约定比例上浮之间",
+    "source": "000002_万  科Ａ_2023年年度报告.pdf",
+    "page": 245,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确列出了 2022 年人民币信用借款的利率范围，与标准答案一致；文件年份和页码信息未直接提及，默认标记为 1。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_013",
+    "chunk_id": "734370d32036c1a1_p101_b001",
+    "question": "万科 A 在 2024 年年度报告中关于业务独立性的描述里，提到上市公司独立拥有哪些要素？",
+    "ground_truth": "独立拥有开展经营活动的资产、人员、资质以及具有独立面向市场自主经营的能力",
+    "source": "000002_万科A_2024年年度报告.pdf",
+    "page": 101,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文第四部分明确列出了业务独立所需的要素，与标准答案完全一致；文件年份和页码信息在原文中可对应验证。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_015",
+    "chunk_id": "0c391dfed99f7d2b_p020_b004",
+    "question": "国华网安自研的“数据与个人信息合规智探大模型一体机”具备哪些能力？",
+    "ground_truth": "具备强大的自然语言理解和生成能力，能够处理多种复杂的语言任务，如智能对话、文本生成、语义理解等，实现个人信息合规的智能化高效检测及合规知识库的快速赋能。",
+    "source": "000004_国华网安_2024年年度报告.pdf",
+    "page": 20,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提及了该一体机具备的能力，与标准答案完全一致；文件年份为 2024 年，与问题中隐含的语境相符；原文未提及具体公司名，但文件标题已包含，故 entity_ok 为 1。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_016",
+    "chunk_id": "8561144288e31ff5_p006_b001",
+    "question": "2023 年末平安银行的资产总额是多少？",
+    "ground_truth": "55,871.16 亿元",
+    "source": "000001_平安银行_2023年年度报告.pdf",
+    "page": 6,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'2023 年末，平安银行资产总额 55,871.16 亿元'，与问题及标准答案完全一致；文件字段为平安银行 2023 年年度报告，年份和主体均匹配。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_017",
+    "chunk_id": "77d98b2636f31c0a_p226_b001",
+    "question": "平安银行 2023 年度以后会计期间在满足规定条件时将重分类进损益的项目中，以公允价值计量且其变动计入其他综合收益的金融资产的信用损失准备金额是多少？",
+    "ground_truth": "0",
+    "source": "000001_平安银行_2024年年度报告.pdf",
+    "page": 226,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文表格中明确列出了“以公允价值计量且其变动计入其他综合收益的金融资产的信用损失准备”对应的数值为空（即 0），与标准答案一致；问题中的年份和公司名称与文件元数据相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_018",
+    "chunk_id": "2273565ecbe1b325_p158_b001",
+    "question": "平安银行 2025 年 12 月 31 日人民币存款准备金缴存比率是多少？",
+    "ground_truth": "5.5%",
+    "source": "000001_平安银行_2025年年度报告.pdf",
+    "page": 158,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确记载了平安银行 2025 年 12 月 31 日人民币存款准备金缴存比率为 5.5%，与标准答案一致；文件字段中的年份和页码信息合理，足以支持回答。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_019",
+    "chunk_id": "511a089558610e86_p305_b001",
+    "question": "2022 年 12 月 31 日，万科 A 的子公司中有多少家位于天津？",
+    "ground_truth": "2 家",
+    "source": "000002_万  科Ａ_2023年年度报告.pdf",
+    "page": 305,
+    "rule_problems": [
+      "答案数字都在原文中出现，但原文语序与答案不同（需模型判断）"
+    ],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文列出了 2022 年 12 月 31 日万科 A 的子公司名单，其中明确包含“天津万锦晟祥房地产开发有限公司”和“天津恒京企业管理有限公司”两家天津公司，与标准答案一致；文件元数据中的年份和页码与原文内容相符。"
+    },
+    "verdict": "suspect"
+  },
+  {
+    "id": "gs_020",
+    "chunk_id": "734370d32036c1a1_p028_b002",
+    "question": "2024 年万科 A 集团全年共完成多少个项目三维可视化建模？",
+    "ground_truth": "169 个项目",
+    "source": "000002_万科A_2024年年度报告.pdf",
+    "page": 28,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'全年共完成集团 169 个项目三维可视化建模'，与问题及标准答案完全一致；文件年份和公司名称均匹配。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_021",
+    "chunk_id": "7c5ef89bceacd16d_p025_b001",
+    "question": "国华网安 2023 年度第四季度归属于上市公司股东的净利润是多少？",
+    "ground_truth": "原文未提供该具体数值",
+    "source": "000004_国华网安_2023年年度报告.pdf",
+    "page": 25,
+    "rule_problems": [
+      "答案文本未原样出现在原文中（需模型判断）"
+    ],
+    "model": {
+      "ok": false,
+      "answerable": 1,
+      "answer_matches": 0,
+      "entity_ok": 1,
+      "reason": "原文表格中仅列出了“营业收入”和“归属于上市公司股东的净利润”的表头，但具体数值（尤其是 2023 年第四季度净利润）缺失，导致无法回答；标准答案称“未提供”，与原文事实一致；问题中的年份和公司名称与文件元数据相符。"
+    },
+    "verdict": "suspect"
+  },
+  {
+    "id": "gs_022",
+    "chunk_id": "0c391dfed99f7d2b_p175_b003",
+    "question": "国华网安 2024 年年度报告中，信用风险主要产生于哪些资产？",
+    "ground_truth": "信用风险主要产生于银行存款、应收票据、应收账款、其他应收款等。",
+    "source": "000004_国华网安_2024年年度报告.pdf",
+    "page": 175,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确列出了信用风险产生的资产（银行存款、应收票据等），与答案完全一致；文件名称、年份及页码均与问题及标注信息相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_023",
+    "chunk_id": "8561144288e31ff5_p223_b001",
+    "question": "2023 年度平安银行其他权益工具投资公允价值变动产生的税后其他综合收益是多少？",
+    "ground_truth": "0",
+    "source": "000001_平安银行_2023年年度报告.pdf",
+    "page": 223,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文表格中'其他权益工具投资公允价值变动'对应的'税后其他综合收益'本年发生额列明确显示为空白（即0），答案一致；文件、年份及页码信息均匹配。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_024",
+    "chunk_id": "77d98b2636f31c0a_p169_b001",
+    "question": "2024 年度，平安银行通过信贷资产证券化和收益权转让终止确认贷款共计多少人民币？",
+    "ground_truth": "人民币 19,432 百万元",
+    "source": "000001_平安银行_2024年年度报告.pdf",
+    "page": 169,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'通过信贷资产证券化和收益权转让终止确认贷款共计人民币 19,432 百万元'，与标准答案完全一致；问题中的年份 2024 与文件标题及原文内容相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_025",
+    "chunk_id": "2273565ecbe1b325_p044_b002",
+    "question": "2025 年末，平安银行财富管理服务信托客户数量是多少万户？",
+    "ground_truth": "4.43 万户",
+    "source": "000001_平安银行_2025年年度报告.pdf",
+    "page": 44,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'财富管理服务信托客户 4.43 万户'，与问题及标准答案完全一致；文件年份为 2025 年，与问题中的'2025 年末'相符。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_026",
+    "chunk_id": "511a089558610e86_p161_b001",
+    "question": "根据万科 A 2023 年年度报告第 161 页，金融资产转移整体满足终止确认条件时，计入当期损益的两项金额分别是哪两项？",
+    "ground_truth": "被转移金融资产在终止确认日的账面价值；因转移金融资产而收到的对价",
+    "source": "000002_万  科Ａ_2023年年度报告.pdf",
+    "page": 161,
+    "rule_problems": [
+      "答案文本未原样出现在原文中（需模型判断）"
+    ],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确列出了计入当期损益的两项金额，与标准答案完全一致；问题中提到的公司、年份、页码均与文件元数据相符。"
+    },
+    "verdict": "suspect"
+  },
+  {
+    "id": "gs_027",
+    "chunk_id": "734370d32036c1a1_p015_b001",
+    "question": "2021-2024 年住宅物业换手率由多少持续提升至多少？",
+    "ground_truth": "1.7%持续提升至3.3%",
+    "source": "000002_万科A_2024年年度报告.pdf",
+    "page": 15,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提及'2021-2024 年，住宅物业换手率由 1.7% 持续提升至 3.3%'，足以回答问题且数据与标准答案完全一致；问题中的年份和数值在原文中均有对应，无需额外文件信息。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_028",
+    "chunk_id": "7c5ef89bceacd16d_p084_b002",
+    "question": "在编制财务报表时，管理层负责评估国华网安公司的哪项能力？",
+    "ground_truth": "持续经营能力",
+    "source": "000004_国华网安_2023年年度报告.pdf",
+    "page": 84,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'在编制财务报表时，管理层负责评估国华网安公司的持续经营能力'，足以回答问题且答案一致；文件字段未提及具体公司或年份，默认记为 1。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_029",
+    "chunk_id": "0c391dfed99f7d2b_p176_b003",
+    "question": "国华网安 2024 年年度报告中，管理层是否采取了利率对冲政策？",
+    "ground_truth": "本公司目前并未采取利率对冲政策。",
+    "source": "000004_国华网安_2024年年度报告.pdf",
+    "page": 176,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到'本公司目前并未采取利率对冲政策'，与标准答案一致；文件名称、年份及页码均匹配。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_030",
+    "chunk_id": "8561144288e31ff5_p066_b002",
+    "question": "冀光恒先生何时担任平安银行行长？",
+    "ground_truth": "执行董事、行长",
+    "source": "000001_平安银行_2023年年度报告.pdf",
+    "page": 66,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确提到“冀光恒先生，执行董事、行长”，足以回答问题且答案一致；原文虽未直接提及年份，但结合上下文及文件标题可推断其任职状态，且问题未要求具体年份，故 entity_ok 为 1。"
+    },
+    "verdict": "ok"
+  },
+  {
+    "id": "gs_031",
+    "chunk_id": "77d98b2636f31c0a_p013_b001",
+    "question": "平安银行 2024 年年度报告中，对公业务经营策略包含哪三个‘做精’？",
+    "ground_truth": "做精行业、做精客户、做精产品",
+    "source": "000001_平安银行_2024年年度报告.pdf",
+    "page": 13,
+    "rule_problems": [],
+    "model": {
+      "ok": true,
+      "answerable": 1,
+      "answer_matches": 1,
+      "entity_ok": 1,
+      "reason": "原文明确列出了‘做精行业、做精客户、做精产品’三个策略，与标准答案完全一致；文件年份和页码信息在问题中提及，且与文件元数据相符。"
+    },
+    "verdict": "ok"
+  }
+]

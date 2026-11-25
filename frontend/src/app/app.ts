@@ -104,6 +104,13 @@ export class App implements OnInit {
 
   ngOnInit(): void {
     this.refreshHealth();
+
+    // 支持 ?q=xxx 直达：便于分享具体问题、也方便截图/自动化验证
+    const preset = new URLSearchParams(window.location.search).get('q');
+    if (preset && preset.trim()) {
+      this.draft.set(preset.trim());
+      this.send();
+    }
   }
 
   private scrollToBottom(): void {

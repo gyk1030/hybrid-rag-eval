@@ -24,6 +24,7 @@ from pathlib import Path
 import requests
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 # 允许用脚本方式直接运行（python app/main.py）。
 # 脚本方式下 sys.path[0] 是脚本所在目录，项目根目录不在搜索路径里。
@@ -47,6 +48,18 @@ app = FastAPI(
     title="hybrid-rag-eval",
     description="向量 + BM25 混合检索 → RRF 融合 → BGE 精排 → 本地 llama.cpp 生成",
     version="0.1.0",
+)
+
+# 前端开发服务器（ng serve）默认跑在 4200，走 /api 代理时其实不涉及跨域；
+# 但直接把页面指向后端、或前端换端口调试时会被浏览器拦下，所以这里放开本地来源。
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:4200",
+        "http://127.0.0.1:4200",
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 

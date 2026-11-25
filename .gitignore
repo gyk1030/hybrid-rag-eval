@@ -38,6 +38,8 @@ torchinductor_*/
 # --------------------------------------------------------------------------- #
 **/jieba.cache
 **/llama-server*.log
+**/backend-server*.log
+**/.angular/
 **/.tmp*/
 *.tmp
 **/pytest-of-*/

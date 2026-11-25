@@ -2,7 +2,7 @@
 
 面向**中文年报问答**的混合检索 RAG 系统与可复现评估框架。
 
-> 状态：后端已可用并完成一轮三阶段评估；前端（React）规划中。
+> 状态：后端 + Angular 前端均已可用，完成一轮三阶段评估。
 
 ## 仓库结构
 
@@ -20,7 +20,13 @@ hybrid-rag-eval/
 │   ├── data/                 # 评测集与评估结果（语料不入库）
 │   ├── docs/执行流程.md       # 11 张流程图 + 参数表 + 性能基线
 │   └── README.md             # 后端的详细说明与快速开始
-└── frontend/         # 规划中
+└── frontend/         # Angular 20 对话框
+    ├── src/app/
+    │   ├── app.ts / app.html / app.css
+    │   ├── chat.service.ts   # /ask、/health 封装
+    │   ├── models.ts         # 与后端响应对应的类型
+    │   └── pipeline-status.ts # 「最终结果来自哪一步」的判定
+    └── README.md
 ```
 
 ## 它解决什么问题
@@ -43,17 +49,22 @@ hybrid-rag-eval/
 ## 快速开始
 
 ```powershell
+# 1. 后端
 cd backend
 uv sync
+Copy-Item .env.example .env      # 编辑 .env 填入 RAG_PG_DSN（真实口令不入库）
+python -m app.main               # 监听 127.0.0.1:8000
 
-# 真实数据库口令放本地 .env（已被 git 忽略）
-Copy-Item .env.example .env
-# 编辑 .env 填入 RAG_PG_DSN
-
-python -m app.main            # 启动接口
+# 2. 前端（另开终端）
+cd frontend
+pnpm install
+pnpm start                       # http://localhost:4200
 ```
 
+前端请求 `/api/*`，由开发服务器代理到后端，浏览器不涉及跨域。
+
 完整步骤（模型准备、建库、评估）见 [backend/README.md](backend/README.md)，
+前端说明见 [frontend/README.md](frontend/README.md)，
 架构与逐环节细节见 [backend/docs/执行流程.md](backend/docs/执行流程.md)。
 
 ## 设计要点

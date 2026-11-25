@@ -1,0 +1,189 @@
+<div class="app">
+  <!-- ───────────────── 顶栏：服务状态 ───────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">RAG</span>
+      <div class="brand-text">
+        <h1>年报问答</h1>
+        <p>向量 + BM25 → RRF 融合 → 精排 → 本地 LLM</p>
+      </div>
+    </div>
+
+    <div class="status">
+      <span class="dot" [class.dot-ok]="backendReady()" [class.dot-warn]="!backendReady()"></span>
+      @if (healthError(); as error) {
+        <span class="status-text">后端未连接</span>
+      } @else if (health(); as data) {
+        <span class="status-text">
+          检索栈{{ data.pipeline.ready ? '就绪' : '未就绪' }} ·
+          LLM{{ data.llm.reachable ? '可达' : '不可达' }}
+        </span>
+      } @else {
+        <span class="status-text">检查中…</span>
+      }
+      <button class="ghost" type="button" (click)="refreshHealth()">刷新</button>
+    </div>
+  </header>
+
+  <!-- ───────────────── 消息区 ───────────────── -->
+  <main class="chat" #scroller>
+    @if (messages().length === 0) {
+      <section class="empty">
+        <h2>问点什么</h2>
+        <p>基于 7 份年报（平安银行 / 万科 A / 国华网安，2023–2025）作答，每条回答都会标出引用的 PDF、片段与最终来源。</p>
+        <div class="samples">
+          @for (sample of samples; track sample) {
+            <button class="sample" type="button" (click)="useSample(sample)">{{ sample }}</button>
+          }
+        </div>
+      </section>
+    }
+
+    @for (message of messages(); track message.id) {
+      @if (message.role === 'user') {
+        <div class="row row-user">
+          <div class="bubble bubble-user">{{ message.text }}</div>
+        </div>
+      } @else {
+        <div class="row row-assistant">
+          <div class="avatar">AI</div>
+          <div class="bubble bubble-assistant">
+            @if (message.pending) {
+              <div class="typing">
+                <span></span><span></span><span></span>
+                <em>检索与生成中…首次请求需要加载模型，可能要一分钟以上</em>
+              </div>
+            } @else if (message.error; as error) {
+              <div class="error">
+                <strong>请求失败</strong>
+                <p>{{ error }}</p>
+              </div>
+            } @else if (message.result; as result) {
+              <!-- ④ 最终结果由哪一步给出 -->
+              @if (message.status; as status) {
+                <div class="source" [class.source-warn]="status.isDegraded" [class.source-fallback]="status.generation === 'extractive'">
+                  <div class="source-main">
+                    <span class="source-label">最终来源</span>
+                    <strong>{{ status.answerSource }}</strong>
+                  </div>
+                  <div class="badges">
+                    <span class="badge" [class.badge-warn]="status.retrieval !== 'rerank'">
+                      检索：{{ status.retrievalLabel }}
+                    </span>
+                    <span class="badge" [class.badge-warn]="status.generation === 'extractive'">
+                      生成：{{ status.generationLabel }}
+                    </span>
+                    @if (status.isDegraded) {
+                      <span class="badge badge-warn">降级：{{ degradedLabels(status) }}</span>
+                    }
+                  </div>
+                  <p class="source-detail">{{ status.retrievalDetail }}</p>
+                </div>
+              }
+
+              <!-- ③ AI 回答 -->
+              <div class="answer">{{ result.answer }}</div>
+
+              <!-- ①② PDF 出处 + chunk 片段 -->
+              <section class="refs">
+                <h3>引用资料 · {{ result.contexts.length }} 条</h3>
+                @for (context of result.contexts; track context.chunk_id) {
+                  <article class="ref">
+                    <header class="ref-head">
+                      <span class="ref-no">{{ context.index }}</span>
+                      <div class="ref-title">
+                        <span class="ref-file" [title]="context.source">{{ fileName(context.source) }}</span>
+                        <span class="ref-meta">
+                          第 {{ context.page }} 页 · {{ blockLabel(context.block_type) }}
+                          · 相关度 {{ formatScore(context.score) }}
+                          @if (rankText(context); as ranks) {
+                            · {{ ranks }}
+                          }
+                        </span>
+                      </div>
+                    </header>
+                    <p class="ref-text">{{ isExpanded(message, context.index) ? context.text : previewOf(context) }}</p>
+                    @if (context.text.length > 220) {
+                      <button class="link" type="button" (click)="toggleChunk(message, context.index)">
+                        {{ isExpanded(message, context.index) ? '收起' : '展开全文' }}
+                      </button>
+                    }
+                  </article>
+                }
+              </section>
+
+              <!-- 降级原因 -->
+              @if (result.degraded.length > 0) {
+                <section class="degraded">
+                  <h3>降级详情</h3>
+                  <ul>
+                    @for (warning of result.warnings; track warning) {
+                      <li>{{ warning }}</li>
+                    }
+                  </ul>
+                </section>
+              }
+
+              <!-- 追踪线索 -->
+              <section class="trace">
+                <button class="link" type="button" (click)="toggleTrace(message)">
+                  {{ message.showTrace ? '收起追踪详情' : '追踪详情（各阶段与耗时）' }}
+                </button>
+                @if (message.showTrace) {
+                  <div class="trace-body">
+                    <p class="trace-line"><span>候选</span>{{ traceCounts(result) }}</p>
+                    <div class="timing">
+                      @for (row of timingRows(result); track row.label) {
+                        <div class="timing-item">
+                          <span class="timing-label">{{ row.label }}</span>
+                          <span class="timing-value">{{ row.value }}</span>
+                        </div>
+                      }
+                    </div>
+                    @if (result.trace; as trace) {
+                      @if (trace.rerank.after.length) {
+                        <p class="trace-line"><span>精排前 3</span>
+                          @for (hit of trace.rerank.before; track hit.chunk_id) {
+                            <code>#{{ hit.rank }} {{ hit.chunk_id.slice(-11) }}</code>
+                          }
+                        </p>
+                        <p class="trace-line"><span>精排后 3</span>
+                          @for (hit of trace.rerank.after; track hit.chunk_id) {
+                            <code>#{{ hit.rank }} {{ hit.chunk_id.slice(-11) }} ({{ formatScore(hit.score) }})</code>
+                          }
+                        </p>
+                      }
+                    }
+                    <p class="trace-meta">
+                      模型 {{ result.model }} · 端到端 {{ formatMs(result.elapsed_ms) }}
+                      @if (result.usage; as usage) {
+                        @if (usage.total_tokens) {
+                          · {{ usage.total_tokens }} tokens
+                        }
+                      }
+                    </p>
+                  </div>
+                }
+              </section>
+            }
+          </div>
+        </div>
+      }
+    }
+  </main>
+
+  <!-- ───────────────── 输入区 ───────────────── -->
+  <footer class="composer">
+    <textarea
+      rows="1"
+      placeholder="输入问题，Enter 发送，Shift+Enter 换行"
+      [value]="draft()"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event)"
+      [disabled]="sending()"
+    ></textarea>
+    <button class="send" type="button" (click)="send()" [disabled]="sending() || !draft().trim()">
+      {{ sending() ? '生成中…' : '发送' }}
+    </button>
+  </footer>
+</div>

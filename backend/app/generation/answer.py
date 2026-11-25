@@ -62,21 +62,32 @@ from app.config import (  # noqa: E402 - 必须在 sys.path 修补之后导入
     TRACE_PREVIEW_CHARS,
 )
 
+from app.generation.consistency import check_year_consistency  # noqa: E402
+
 logger = logging.getLogger("app.generation.answer")
 
 # 注意：这里刻意**不**要求模型在答案里标注 [编号]。实测 3B 模型在这种情况下会把
 # 编号写错（例如引用到别家公司的资料）或复述资料头部，反而降低可信度；出处由
 # AnswerResult.contexts 里的 index/source/page 提供，更准确。
+#
+# 「年份规则」写成了可执行的判断（跳过哪条、什么情况可以跨年），而不是「请核对」：
+# 实测只写「请核对年份」时，3B 模型会拿 2024 年报表格里的 1.39% 回答「2023 年末」，
+# 而正确的 1.37% 当时就在上下文里。生成后另有 consistency.check_year_consistency
+# 做确定性兜底。
 SYSTEM_PROMPT = (
     "你是中文财报问答助手。\n"
     "回答步骤：先在【参考资料】中逐条查找与问题直接相关的数字或事实，"
     "找到就把该数字原样写进答案（保留单位）。"
     "资料里的“□适用 √不适用”是勾选项，可以忽略。"
-    "只有确实找不到任何相关数字或事实时，才回答“根据提供的资料无法回答该问题”。"
     "答案控制在 3 句以内。\n"
-    "每条参考资料开头都标了来源文件名。作答前必须先核对：该资料属于哪家公司、哪一年。"
-    "只能用与问题所指公司、年份一致的资料作答；拿别家公司的数字回答属于严重错误，"
-    "这种情况下应回答“根据提供的资料无法回答该问题”。"
+    "每条参考资料开头都标了来源文件名，文件名里的年份就是这份年报的年度。\n"
+    "【年份规则】先确认问题问的年份：\n"
+    "1. 问题只有一个年份（如“2023 年末”）时，只能用该年份年报的资料；"
+    "文件名年份不同的资料一律跳过，即使里面的数字看起来更接近问题。\n"
+    "2. 问题同时提到多个年份（如“2025 相对 2024 年”）时，这几年的年报都可以用。\n"
+    "3. 问题没有年份时不受此限。\n"
+    "【公司规则】只能用与问题所指公司一致的资料；拿别家公司的数字作答属于严重错误。\n"
+    "如果没有任何资料同时满足公司和年份要求，回答“根据提供的资料无法回答该问题”。"
 )
 
 
@@ -125,6 +136,11 @@ class AnswerResult:
     # 各阶段追踪线索（vector / bm25 / rrf / rerank / context / timing / fallback）。
     # trace=False 时为 None。
     trace: dict | None = None
+    # 年份一致性校验结果：
+    # {"status": "ok"|"mismatch"|"skipped", "asked_years": [...], "answer_years": [...],
+    #  "source_year": 2024, "source_index": 4, "detail": "..."}
+    # status=mismatch 时 answer 不可信（数字是真的，但年份配错了）。
+    answer_check: dict | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -489,6 +505,13 @@ def answer_question(
         recorder.add_timing("generation_ms", generation_ms)
         recorder.add_timing("total_ms", bootstrap_ms + retrieval_ms + generation_ms)
 
+    # 年份一致性校验：确定性兜底，不依赖模型自觉。
+    # 3B 模型实测会拿别年度资料作答（数字是真的、年份是错的），这里把它拦下来。
+    check = check_year_consistency(question, answer, contexts)
+    if check.status == "mismatch":
+        warnings.append(f"year_mismatch: {check.detail}")
+        logger.warning("年份校验未通过 —— %s", check.detail)
+
     return AnswerResult(
         question=question,
         answer=answer,
@@ -503,6 +526,7 @@ def answer_question(
         degraded=degraded,
         warnings=warnings,
         trace=recorder.to_dict() if recorder is not None else None,
+        answer_check=check.to_dict(),
     )
 
 
@@ -584,6 +608,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"\n回答（{result.generation_ms:.0f} ms，模型 {result.model}）：\n{result.answer}")
     if result.usage:
         print(f"\n用量：{result.usage}")
+    if result.answer_check:
+        status = result.answer_check.get("status")
+        detail = result.answer_check.get("detail", "")
+        if status == "mismatch":
+            print(f"\n⚠ 年份校验未通过：{detail}")
+        elif status == "ok":
+            print(f"\n年份校验：通过（{detail}）")
+        else:
+            print(f"\n年份校验：跳过（{detail}）")
     if result.degraded:
         print(f"\n⚠ 本次发生降级：{', '.join(result.degraded)}")
         for warning in result.warnings:

@@ -15,8 +15,8 @@ import { ChatService } from './chat.service';
 import { AnswerResult, HealthResponse, RetrievedContext } from './models';
 import { PipelineStatus, describeDegradedStage, resolvePipelineStatus } from './pipeline-status';
 
-/** 一条聊天记录 */
-interface ChatMessage {
+/** 一条聊天记录（导出是为了让单测能构造渲染用例） */
+export interface ChatMessage {
   id: number;
   role: 'user' | 'assistant';
   /** 用户问题，或 AI 的回答正文 */

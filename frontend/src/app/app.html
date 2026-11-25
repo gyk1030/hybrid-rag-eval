@@ -59,6 +59,17 @@
                 <p>{{ error }}</p>
               </div>
             } @else if (message.result; as result) {
+              <!-- 年份校验：答案数字来自别年度年报时，最先提示 -->
+              @if (result.answer_check; as check) {
+                @if (check.status === 'mismatch') {
+                  <div class="check-alert" role="alert">
+                    <strong>⚠ 年份校验未通过</strong>
+                    <p>{{ check.detail }}</p>
+                    <p class="check-hint">数字本身是真的，但属于别的年度，不能直接回答本问题。请核对下方引用资料。</p>
+                  </div>
+                }
+              }
+
               <!-- ④ 最终结果由哪一步给出 -->
               @if (message.status; as status) {
                 <div class="source" [class.source-warn]="status.isDegraded" [class.source-fallback]="status.generation === 'extractive'">
@@ -75,6 +86,12 @@
                     </span>
                     @if (status.isDegraded) {
                       <span class="badge badge-warn">降级：{{ degradedLabels(status) }}</span>
+                    }
+                    @if (result.answer_check?.status === 'ok') {
+                      <span class="badge badge-ok">年份校验 ✓</span>
+                    }
+                    @if (result.answer_check?.status === 'skipped') {
+                      <span class="badge">年份校验：问题未提年份</span>
                     }
                   </div>
                   <p class="source-detail">{{ status.retrievalDetail }}</p>

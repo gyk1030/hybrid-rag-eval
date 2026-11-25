@@ -87,6 +87,25 @@ export interface AnswerResult {
   degraded: string[];
   warnings: string[];
   trace: Trace | null;
+  /**
+   * 年份一致性校验（后端确定性检查，不依赖模型）。
+   * status=mismatch 表示答案的数字来自别年度的年报——数字是真的，但答非所问。
+   */
+  answer_check: AnswerCheck | null;
+}
+
+/** 年份校验结果 */
+export interface AnswerCheck {
+  status: 'ok' | 'mismatch' | 'skipped';
+  /** 问题涉及的年份（区间题会展开） */
+  asked_years: number[];
+  /** 答案里明写的年份 */
+  answer_years: number[];
+  /** 答案数值所属资料的文件年份 */
+  source_year: number | null;
+  /** 所属资料在上下文里的序号 */
+  source_index: number | null;
+  detail: string;
 }
 
 /** 服务与检索栈状态 */

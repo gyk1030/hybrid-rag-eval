@@ -75,6 +75,22 @@ TABLE_SPLIT_ROWS = 10
 TABLE_CAPTION_MAX_CHARS = 80
 TABLE_CAPTION_MAX_GAP = 40.0
 TABLE_EDGE_GATE = 5
+
+# 跨页续表：pdfplumber 会把一张跨页表格拆成两张，下一页那张没有表头。
+# 判定为续表需要同时满足「列数一致」和下面任一位置条件：
+#   - 上一页表格底边贴近页底（表格没画完就翻页）
+#   - 本页表格顶边贴近页顶（表格从页面顶端接着画）
+TABLE_CONTINUE_BOTTOM_RATIO = 0.85
+TABLE_CONTINUE_TOP_RATIO = 0.15
+
+# 单元格是否「纯数值」：用于区分表头行与数据行。
+# 允许括号负数、千分位逗号、百分号，例如 1,234 / 5.5% / (1.2%) / -。
+NUMERIC_CELL_RE = re.compile(r"^[(（]?\s*[-–—]?\s*[\d,，]+(?:\.\d+)?\s*[%％]?\s*[)）]?$")
+# 代码里检测年份：出现「20XX 年」说明该块内的数值可以归年。
+YEAR_IN_TEXT_RE = re.compile(r"20\d{2}\s*年")
+# 财税意义上的「有数值」：带百分号，或带千分位逗号的金额。
+# 这样「000001」这种股票代码不会触发「无表头」警示。
+FINANCIAL_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?\s*[%％]|\d{1,3}(?:[,，]\d{3})+(?:\.\d+)?")
 # 检测到的网格只有在确实是表格时才保留：至少表头加一行数据、至少两列、
 # 且非空单元格占比达标。没有这道闸门，带边框的正文段落会被识别成单列表格
 # （正文随之从文本流里消失），稀疏的版面残迹会变成几乎没有内容的 30 列网格。
@@ -126,6 +142,8 @@ class TableBlock:
     bbox: tuple[float, float, float, float]
     rows: list[list[str]]
     caption_bbox: tuple[float, float, float, float] | None = None
+    # 跨页续表时记录表头来自哪一页（None 表示自带表头）
+    inherited_from: int | None = None
 
 
 @dataclass(slots=True)
@@ -437,14 +455,18 @@ def split_table_rows(
     rows: Sequence[Sequence[str]],
     *,
     max_rows: int = TABLE_SPLIT_ROWS,
+    header_count: int = 1,
 ) -> list[tuple[int, int, list[list[str]]]]:
     """把表格正文行按每组至多 ``max_rows`` 行切分。
+
+    ``header_count`` 是前导表头行数（两级表头时为 2）；这些行不进正文分组，
+    但每个分组渲染时都会重复表头。
 
     返回 ``(row_start, row_end, rows)``，行号是正文行（不含表头）的 1 基闭区间。
     """
     if not rows:
         return []
-    body = [list(row) for row in rows[1:]]
+    body = [list(row) for row in rows[max(1, header_count) :]]
     if not body:
         return [(1, 0, [])]
     if len(body) <= max_rows:
@@ -454,6 +476,108 @@ def split_table_rows(
         part = body[start : start + max_rows]
         groups.append((start + 1, start + len(part), part))
     return groups
+
+
+def _is_numeric_cell(value: str) -> bool:
+    """单元格是否是「纯数值」（含百分号、括号负数、千分位）。
+
+    「2024年12月31日」这种带中文的年份不算数值——它是表头里的年度列名。
+    """
+    cell = normalize_inline(value).replace(" ", "")
+    if not cell:
+        return False
+    return bool(NUMERIC_CELL_RE.match(cell))
+
+
+def header_row_count(rows: Sequence[Sequence[str]]) -> int:
+    """返回前导表头行数（支持两级表头）。
+
+    财报表格常见两级表头::
+
+        | 项 目 | 2024年12月31日 |     |     | 2023年12月31日 |     |     | 不良率增减 |
+        |      | 余额 | 占比 | 不良率 | 余额 | 占比 | 不良率 |          |
+
+    两行都不含纯数值 → 都算表头；遇到第一行含数值的即为数据行。
+    返回 0 表示这张表「一上来就是数据」，即没有表头。
+    """
+    count = 0
+    for row in rows:
+        if any(_is_numeric_cell(cell) for cell in row):
+            break
+        count += 1
+    return count
+
+
+def _row_width(rows: Sequence[Sequence[str]]) -> int:
+    return max((len(row) for row in rows), default=0)
+
+
+def link_continued_tables(
+    page_tables: dict[int, list[TableBlock]],
+    page_heights: dict[int, float],
+) -> int:
+    """把跨页续表接到上一页的表头上，返回接上的表格数。
+
+    背景：``pdfplumber`` 按页识别表格，一张跨页表格会被拆成两张，
+    下一页那张的起始行直接是数据（如「贴现 | 185,729 | 5.5% | …」），
+    导致块内没有任何年份标记，数值无法归年——这正是「1.39% 被当成 2023 年数据」
+    的根源之一。
+
+    只在两个条件同时成立时才接表头，避免把两张无关的表格拼在一起：
+    列数一致，且（上一页表格贴着页底 或 本页表格贴着页顶）。
+    """
+    linked = 0
+    for page_no in sorted(page_tables):
+        current = page_tables[page_no]
+        if not current:
+            continue
+
+        first = current[0]
+        if header_row_count(first.rows) > 0:
+            continue  # 自带表头，不是续表
+        previous = page_tables.get(page_no - 1) or []
+        if not previous:
+            continue
+
+        prev_last = previous[-1]
+        header_count = header_row_count(prev_last.rows)
+        if header_count == 0:
+            continue  # 上一页最后一张表也没有表头，无从继承
+
+        header = prev_last.rows[:header_count]
+        if _row_width(header) != _row_width(first.rows):
+            continue  # 列数不同，大概率是另一张表
+
+        prev_height = page_heights.get(page_no - 1, 0.0)
+        current_height = page_heights.get(page_no, 0.0)
+        prev_bottom_ratio = float(prev_last.bbox[3]) / prev_height if prev_height else 0.0
+        current_top_ratio = float(first.bbox[1]) / current_height if current_height else 1.0
+        if not (
+            prev_bottom_ratio >= TABLE_CONTINUE_BOTTOM_RATIO
+            or current_top_ratio <= TABLE_CONTINUE_TOP_RATIO
+        ):
+            continue
+
+        first.rows = [list(row) for row in header] + list(first.rows)
+        first.inherited_from = page_no - 1
+        base = prev_last.caption
+        if not base or base == UNNAMED_TABLE:
+            base = first.caption or UNNAMED_TABLE
+        first.caption = f"{base}{CONTINUED_SUFFIX}"
+        linked += 1
+    return linked
+
+
+def _needs_header_warning(rows: Sequence[Sequence[str]]) -> bool:
+    """是否该提示「无表头」：含财税数值但整表没有任何年份标记。
+
+    这类块里的数值无法归年，模型只能猜，必须让它在文本里看得见。
+    只认「带百分号」或「带千分位」的数字，避免把股票代码、页码误判成数值。
+    """
+    joined = " ".join(cell for row in rows for cell in row)
+    if not FINANCIAL_NUMBER_RE.search(joined):
+        return False
+    return not YEAR_IN_TEXT_RE.search(joined)
 
 
 def _is_page_frame(bbox: Sequence[float], page_width: float, page_height: float) -> bool:
@@ -639,18 +763,40 @@ def _table_chunks_for_page(
     source: str,
     doc_id: str,
 ) -> list[Chunk]:
-    """把一页的表格逐个转成 Markdown 块，超长表格分组并重复表头。"""
+    """把一页的表格逐个转成 Markdown 块，超长表格分组并重复表头。
+
+    三处细节直接关系到「数值能不能归年」：
+
+    1. 表头行数不止一行（年度行 + 指标行），全部保留重复；
+    2. 跨页续表已在 :func:`link_continued_tables` 里接上上一页表头，
+       这里在标题后标出「表头沿用第 N 页」；
+    3. 整表既没年份又含数字时，标出「无表头·数值不可归年」，
+       避免模型把没有年份的数值硬安到问题所问的年份上。
+    """
     chunks: list[Chunk] = []
     for table in tables:
-        header = list(table.rows[0]) if table.rows else []
-        groups = split_table_rows(table.rows)
+        header_count = header_row_count(table.rows)
+        if header_count > 0:
+            header = [list(row) for row in table.rows[:header_count]]
+        else:
+            # 没有识别到表头：沿用旧行为把首行当表头，同时打上警示标记
+            header = [list(table.rows[0])] if table.rows else []
+        groups = split_table_rows(table.rows, header_count=max(1, header_count))
         split = len(groups) > 1
+        warn_headerless = header_count == 0 and _needs_header_warning(table.rows)
+
         for row_start, row_end, body_rows in groups:
             caption = table.caption
             if split and row_start > 1:
                 caption = f"{caption}{CONTINUED_SUFFIX}"
-            markdown = table_to_markdown([header] + body_rows)
-            text = f"{caption}\n{markdown}".strip()
+            notes: list[str] = []
+            if table.inherited_from:
+                notes.append(f"表头沿用第 {table.inherited_from} 页")
+            if warn_headerless:
+                notes.append("无表头·数值不可归年")
+            note = f"（{'；'.join(notes)}）" if notes else ""
+            markdown = table_to_markdown(header + body_rows)
+            text = f"{caption}{note}\n{markdown}".strip()
             if not text:
                 continue
             chunks.append(
@@ -784,6 +930,11 @@ def parse_pdf(
         page_lines, page_tables, page_heights, total_pages, logger, source
     )
     _refine_table_captions(page_tables, raw_page_lines, page_heights, furniture_keys)
+
+    # 跨页续表：把上一页的表头接到本页没有表头的表格上
+    linked = link_continued_tables(page_tables, page_heights)
+    if linked:
+        logger.info("%s: 跨页续表接回表头 %d 张", source, linked)
 
     chunks: list[Chunk] = []
     for page_no in range(1, total_pages + 1):

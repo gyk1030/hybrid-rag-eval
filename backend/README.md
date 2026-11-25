@@ -102,7 +102,7 @@ HF_ENDPOINT=https://hf-mirror.com huggingface-cli download BAAI/bge-m3 --local-d
 # 解析 PDF → chunks.jsonl
 python -m app.ingestion.pdf_parser --input data/corpus --output data/parsed/chunks.jsonl
 
-# 编码入库（5,656 块，GPU bf16 约 6 分钟）
+# 编码入库（5,573 块，GPU bf16 约 6 分钟）
 python -m app.retrieval.vector_store --input data/parsed/chunks.jsonl
 
 # 建 BM25 索引
@@ -142,6 +142,27 @@ GET http://127.0.0.1:8000/health
 | `Failed to spawn: uvicorn / program not found` | 同一 venv 里并发跑了两条 `uv run`，环境正在被改写 | 一次只跑一条，等前一条结束 |
 | `TypeError: ... relative import` | app 参数写成了 `.\app\main:app` | 改成 `app.main:app` |
 
+
+### 解析的两个坑（都已在 `pdf_parser.py` 里处理）
+
+**跨页表格会丢表头。** pdfplumber 按页识别表格，一张跨页表会被拆成两张，下一页那张
+起始行直接是数据。平安银行 2024 年报第 37 页就是这样：表头「项 目 / 2024年12月31日 /
+2023年12月31日」留在第 36 页，第 37 页只剩「贴现 | 185,729 | 5.5% …」和
+「个人贷款 | … | 1.39% | … | 1.37% | …」——两个数字在块内无法归年。
+
+处理：`link_continued_tables()` 在列数一致且表格贴着页边（上一页底边 ≥85% 页高，或
+本页顶边 ≤15% 页高）时，把上一页的表头接过来，并在块首标注「表头沿用第 N 页」。
+重新解析后共接回 73 个表格块。
+
+**两级表头会被当成数据。** 财报表格常见「年度行 + 余额/占比/不良率 行」两行表头。
+`header_row_count()` 按「前导非数值行」识别表头行数，切分时整组重复，不再把第二行
+表头当正文。
+
+另外，整表含财税数值却没有任何年份标记的块，会在标题后标注「无表头·数值不可归年」，
+避免模型把无年份的数值硬安到问题所问的年份上。
+
+> ⚠️ 重新解析后语料从 5,656 块变为 5,573 块（两级表头不再计入正文），
+> `data/eval_results/` 里的评分结果是**旧语料**上跑的，需要重跑三阶段采集与评分。
 
 ### 6. 跑评估
 

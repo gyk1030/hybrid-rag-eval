@@ -113,12 +113,18 @@ python -m app.retrieval.bm25_index --rebuild
 
 ```bash
 # 本地 LLM（-ngl 999 必须有，否则退回 CPU 只有 4 tok/s）
-llama-server -m /path/to/qwen2.5-3b-instruct-q5_k_m.gguf -c 8192 -ngl 999 \
-             --port 8080 --host 0.0.0.0 -fa auto
+llama-server -m /path/to/qwen2.5-3b-instruct-q5_k_m.gguf -c 8192 -ngl 999 --port 8080 --host 0.0.0.0 -fa auto
 
-# 应用
+# 应用（三种写法等价，都在 backend/ 目录下执行）
 python -m app.main
+uv run python -m app.main
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+> ⚠️ `uvicorn` 的 app 参数必须是**模块路径**，用点号分隔：
+> `app.main:app` 可以，`.\app\main:app` 会报
+> `TypeError: the 'package' argument is required to perform a relative import`
+> （以 `.` 开头会被当成相对导入）。
 
 ```bash
 GET http://127.0.0.1:8000/ask?q=万科2024年的研发投入金额是多少
@@ -126,6 +132,16 @@ GET http://127.0.0.1:8000/health
 ```
 
 响应包含 `answer`、`contexts`、`degraded`、`trace` 与各阶段耗时。
+
+#### 启动排错
+
+| 报错 | 原因 | 处理 |
+|---|---|---|
+| `Expected a Python module at: src\hybrid_rag_eval\__init__.py` | 项目被当成可安装的库去构建，但代码在 `app/` 下 | `pyproject.toml` 已声明 `[tool.uv] package = false`；若你本地是旧版本，先 `git pull` |
+| `uv trampoline failed to canonicalize script path` | `.venv/Scripts/*.exe` 这些 uv 生成的启动器损坏 | `uv pip install --force-reinstall --no-deps uvicorn`，或直接用 `uv run python -m app.main` |
+| `Failed to spawn: uvicorn / program not found` | 同一 venv 里并发跑了两条 `uv run`，环境正在被改写 | 一次只跑一条，等前一条结束 |
+| `TypeError: ... relative import` | app 参数写成了 `.\app\main:app` | 改成 `app.main:app` |
+
 
 ### 6. 跑评估
 

@@ -37,8 +37,7 @@ torchinductor_*/
 # 本地缓存、日志与临时文件
 # --------------------------------------------------------------------------- #
 **/jieba.cache
-**/llama-server*.log
-**/backend-server*.log
+*.log
 **/.angular/
 **/.tmp*/
 *.tmp

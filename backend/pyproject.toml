@@ -1,7 +1,7 @@
 [project]
 name = "hybrid-rag-eval"
 version = "0.1.0"
-description = "Add your description here"
+description = "中文年报问答的混合检索 RAG 后端（PDF 解析 → 向量/BM25 → RRF → 精排 → 本地 LLM）"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 dependencies = [
@@ -19,12 +19,12 @@ dependencies = [
     "uvicorn>=0.54.0",
 ]
 
-[project.scripts]
-hybrid-rag-eval = "hybrid_rag_eval:main"
-
-[build-system]
-requires = ["uv_build>=0.13.3,<0.14.0"]
-build-backend = "uv_build"
+# 本项目是「应用」而不是「可安装的库」：入口是 app/ 下的模块（python -m app.main）。
+# 不加下面这行时，uv 会因为缺少 [build-system] 的模块目录而报
+#   Expected a Python module at: src\hybrid_rag_eval\__init__.py
+# 声明为非包项目后，uv 只负责管理依赖与虚拟环境，不再尝试构建/安装项目自身。
+[tool.uv]
+package = false
 
 # PyPI 上 Windows + Python 3.15 的 torch 是 CPU-only 构建，必须显式指向
 # PyTorch 官方 CUDA 源，否则 uv sync 会把显卡版覆盖回 CPU 版。

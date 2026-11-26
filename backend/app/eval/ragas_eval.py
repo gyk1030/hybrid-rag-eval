@@ -42,7 +42,19 @@ from app.config import (  # noqa: E402
     LLM_TIMEOUT,
 )
 
-METRIC_NAMES = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
+# 五个指标：
+# - 前四个是 RAGAS 的经典指标，都要调裁判 LLM；
+# - id_based_context_recall 直接比对 chunk_id，零 LLM 调用，用来补 context_recall
+#   饱和后的区分度（实测 context_recall 在 hybrid/rerank 上恒为 1.0）。
+METRIC_NAMES = [
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "context_recall",
+    "id_based_context_recall",
+]
+# 默认启用的指标（可用 --metrics 覆盖）
+DEFAULT_METRICS = METRIC_NAMES
 META_FILE = "eval_meta.jsonl"
 
 
@@ -110,10 +122,33 @@ def make_judge():
     return LangchainLLMWrapper(llm)
 
 
-def make_metrics():
-    from ragas.metrics import answer_relevancy, context_precision, context_recall, faithfulness
+def make_metrics(names: Sequence[str] | None = None) -> list[Any]:
+    """按名称构造指标对象；``None`` 表示用默认全集。
 
-    return [faithfulness, answer_relevancy, context_precision, context_recall]
+    ``id_based_context_recall`` 不需要裁判 LLM 与 embedding，可以直接在
+    records 上跑出结果，所以它在任何指标子集里都值得保留。
+    """
+    from ragas.metrics import (
+        IDBasedContextRecall,
+        answer_relevancy,
+        context_precision,
+        context_recall,
+        faithfulness,
+    )
+
+    available: dict[str, Any] = {
+        "faithfulness": faithfulness,
+        "answer_relevancy": answer_relevancy,
+        "context_precision": context_precision,
+        "context_recall": context_recall,
+        "id_based_context_recall": IDBasedContextRecall(),
+    }
+
+    selected = list(names) if names else list(DEFAULT_METRICS)
+    unknown = [name for name in selected if name not in available]
+    if unknown:
+        raise SystemExit(f"未知指标：{unknown}（可选 {list(available)}）")
+    return [available[name] for name in selected]
 
 
 # --------------------------------------------------------------------------- #
@@ -132,28 +167,38 @@ def load_records(path: Path) -> list[dict[str, Any]]:
 def build_dataset(records: Sequence[dict[str, Any]]):
     from ragas.dataset_schema import EvaluationDataset, SingleTurnSample
 
-    samples = [
-        SingleTurnSample(
-            user_input=record["question"],
-            response=record["answer"],
-            retrieved_contexts=list(record["contexts"]),
-            reference=record.get("ground_truth", ""),
+    samples = []
+    for record in records:
+        # chunk_id 双列用于 id_based_context_recall（逐 id 比对，不经裁判）
+        retrieved_ids = list(record.get("context_chunk_ids") or [])
+        reference_ids = list(record.get("reference_chunk_ids") or [])
+        samples.append(
+            SingleTurnSample(
+                user_input=record["question"],
+                response=record["answer"],
+                retrieved_contexts=list(record["contexts"]),
+                reference=record.get("ground_truth", ""),
+                retrieved_context_ids=retrieved_ids or None,
+                reference_context_ids=reference_ids or None,
+            )
         )
-        for record in records
-    ]
     return EvaluationDataset(samples=samples)
 
 
-def run_eval(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
-    """跑四个指标。
+def run_eval(
+    records: Sequence[dict[str, Any]],
+    metric_names: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """跑选定的指标（默认五个）。
 
     降级策略：整批 ``evaluate`` 失败时**不放弃**，改成逐个指标单独跑——
-    一个指标（例如 answer_relevancy 依赖 embedding）挂掉，其余三个仍然出分。
+    一个指标（例如 answer_relevancy 依赖 embedding）挂掉，其余仍然出分。
     单条样本失败由 ragas 自己记成 NaN，不在这里处理。
     """
     from ragas import evaluate
     from ragas.run_config import RunConfig
 
+    selected = list(metric_names) if metric_names else list(DEFAULT_METRICS)
     dataset = build_dataset(records)
     judge = make_judge()
     embeddings = make_embeddings()
@@ -164,7 +209,7 @@ def run_eval(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     try:
         result = evaluate(
             dataset=dataset,
-            metrics=make_metrics(),
+            metrics=make_metrics(selected),
             llm=judge,
             embeddings=embeddings,
             run_config=run_config,
@@ -173,9 +218,14 @@ def run_eval(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - 整批失败时降级为逐指标重跑
         failures.append(f"批量评估失败：{type(exc).__name__}: {exc}")
         print(f"  ⚠ 批量评估失败，改为逐个指标重跑：{type(exc).__name__}: {exc}")
-        frame = _evaluate_one_by_one(dataset, judge, embeddings, run_config, failures)
+        frame = _evaluate_one_by_one(dataset, judge, embeddings, run_config, failures, selected)
 
     rows = json.loads(frame.to_json(orient="records", force_ascii=False))
+    # ragas 的 to_pandas() 不会保留 chunk_id 两列，但它们是 id_based_context_recall 的
+    # 唯一依据；补回每行，事后才能不看代码就复算这个分数。
+    for row, record in zip(rows, records):
+        row.setdefault("retrieved_context_ids", list(record.get("context_chunk_ids") or []))
+        row.setdefault("reference_context_ids", list(record.get("reference_chunk_ids") or []))
     mean = {}
     for name in METRIC_NAMES:
         if name in frame.columns:
@@ -183,28 +233,30 @@ def run_eval(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             mean[name] = None if pd.isna(value) else round(float(value), 4)
         else:
             mean[name] = None
-    return {"rows": rows, "mean": mean, "failures": failures}
+    return {"rows": rows, "mean": mean, "failures": failures, "metrics": selected}
 
 
-def _evaluate_one_by_one(dataset, judge, embeddings, run_config, failures: list[str]):
+def _evaluate_one_by_one(
+    dataset,
+    judge,
+    embeddings,
+    run_config,
+    failures: list[str],
+    metric_names: Sequence[str] | None = None,
+):
     """逐个指标跑，收集成功的列；全部失败则返回只有原始字段的空表。"""
     from ragas import evaluate
 
-    from ragas.metrics import answer_relevancy, context_precision, context_recall, faithfulness
-
-    available = {
-        "faithfulness": faithfulness,
-        "answer_relevancy": answer_relevancy,
-        "context_precision": context_precision,
-        "context_recall": context_recall,
-    }
+    selected = list(metric_names) if metric_names else list(DEFAULT_METRICS)
+    metrics = {metric.name: metric for metric in make_metrics(selected)}
 
     frame = None
-    for name in METRIC_NAMES:
+    for name in selected:
+        metric = metrics[name]
         try:
             single = evaluate(
                 dataset=dataset,
-                metrics=[available[name]],
+                metrics=[metric],
                 llm=judge,
                 embeddings=embeddings,
                 run_config=run_config,
@@ -222,9 +274,9 @@ def _evaluate_one_by_one(dataset, judge, embeddings, run_config, failures: list[
         print(f"    ✓ {name} 完成")
 
     if frame is None:
-        # 四个指标全挂：保留原始字段，均值留空，至少把失败原因记进 eval_meta
+        # 所有指标全挂：保留原始字段，均值留空，至少把失败原因记进 eval_meta
         base = dataset.to_pandas()
-        for name in METRIC_NAMES:
+        for name in selected:
             base[name] = None
         return base
     return frame
@@ -233,6 +285,64 @@ def _evaluate_one_by_one(dataset, judge, embeddings, run_config, failures: list[
 # --------------------------------------------------------------------------- #
 # 保存与对比
 # --------------------------------------------------------------------------- #
+def merge_with_existing(payload: dict[str, Any], output: Path) -> dict[str, Any]:
+    """把本次评出的指标列合并进已有的结果文件。
+
+    用途：``id_based_context_recall`` 这类零 LLM 调用的指标可以单独补算，
+    不必为了一个指标把四个要跑裁判的指标重算一遍（那要一个多小时）。
+
+    只按行序对齐（同一条 records 文件、同一顺序），行数不一致就放弃合并。
+    """
+    if not output.is_file():
+        return payload
+    try:
+        existing = json.loads(output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return payload
+
+    old_rows = existing.get("rows") or []
+    new_rows = payload.get("rows") or []
+    if not old_rows or len(old_rows) != len(new_rows):
+        print(
+            f"  跳过合并：已有结果 {len(old_rows)} 行，本次 {len(new_rows)} 行，对不齐"
+        )
+        return payload
+
+    merged_rows: list[dict[str, Any]] = []
+    for old, new in zip(old_rows, new_rows):
+        row = dict(old)
+        for name in METRIC_NAMES:
+            value = new.get(name)
+            if isinstance(value, (int, float)):
+                row[name] = value
+        # chunk_id 两列是 id_based_context_recall 的依据，必须一起带上
+        for key in ("retrieved_context_ids", "reference_context_ids"):
+            if new.get(key):
+                row[key] = new[key]
+        merged_rows.append(row)
+
+    mean: dict[str, float | None] = {}
+    for name in METRIC_NAMES:
+        values = [
+            row[name]
+            for row in merged_rows
+            if isinstance(row.get(name), (int, float))
+        ]
+        mean[name] = round(sum(values) / len(values), 4) if values else None
+
+    # 保留上一次的评测时间作为历史，另记合并时间
+    history = list(existing.get("merge_history") or [])
+    history.append(
+        {
+            "merged_at": datetime.now().isoformat(timespec="seconds"),
+            "metrics": list(payload.get("metrics") or []),
+            "previous_evaluated_at": existing.get("evaluated_at"),
+        }
+    )
+    print(f"  已与已有结果合并（原有 {len(old_rows)} 行，补入 {len(payload.get('metrics') or [])} 个指标）")
+    return {**payload, "rows": merged_rows, "mean": mean, "merge_history": history}
+
+
 def save_result(
     stage: str,
     payload: dict[str, Any],
@@ -246,12 +356,16 @@ def save_result(
         "stage": stage,
         "evaluated_at": datetime.now().isoformat(timespec="seconds"),
         "samples": samples,
-        "metrics": METRIC_NAMES,
+        # 本次实际评了哪些指标（合并模式下可能只是其中一个）
+        "metrics": list(payload.get("metrics") or METRIC_NAMES),
+        "all_metrics": METRIC_NAMES,
         "mean": payload["mean"],
         "judge": {"model": LLM_MODEL, "base_url": LLM_BASE_URL, "temperature": JUDGE_TEMPERATURE},
         "failures": list(payload.get("failures") or []),
         "rows": payload["rows"],
     }
+    if payload.get("merge_history"):
+        document["merge_history"] = payload["merge_history"]
     with output.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(document, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
@@ -261,6 +375,7 @@ def save_result(
         "evaluated_at": document["evaluated_at"],
         "samples": samples,
         "mean": payload["mean"],
+        "metrics": document["metrics"],
         "judge_model": LLM_MODEL,
         "judge_base_url": LLM_BASE_URL,
         "temperature": JUDGE_TEMPERATURE,
@@ -319,6 +434,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="把采集阶段失败的样本（answer 为空）也纳入评分",
     )
     parser.add_argument("--compare", help="只做对比：传入 eval_results 目录")
+    parser.add_argument(
+        "--metrics",
+        help=(
+            "逗号分隔的指标名，默认全部："
+            + ",".join(METRIC_NAMES)
+            + "。只想看召回质量时可用 --metrics id_based_context_recall（零 LLM 调用）"
+        ),
+    )
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="把本次评出的指标合并进已有结果文件（行数需一致），用于补算零成本指标",
+    )
     args = parser.parse_args(argv)
 
     if args.compare:
@@ -345,8 +473,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     stage = args.stage or records[0].get("stage") or Path(args.input).stem.replace("_records", "")
     output = Path(args.output) if args.output else Path(EVAL_RESULTS_DIR) / f"{stage}.json"
 
-    print(f"stage={stage}  样本={len(records)}  裁判={LLM_MODEL} @ {LLM_BASE_URL}")
-    payload = run_eval(records)
+    metric_names = (
+        [name.strip() for name in args.metrics.split(",") if name.strip()]
+        if args.metrics
+        else list(DEFAULT_METRICS)
+    )
+
+    print(
+        f"stage={stage}  样本={len(records)}  指标={len(metric_names)} 个  "
+        f"裁判={LLM_MODEL} @ {LLM_BASE_URL}"
+    )
+    payload = run_eval(records, metric_names)
+    if args.merge:
+        payload = merge_with_existing(payload, output)
     save_result(
         stage,
         payload,
@@ -357,8 +496,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print("\n平均分：")
     for metric in METRIC_NAMES:
-        value = payload["mean"][metric]
-        print(f"  {metric:20s} {'—' if value is None else f'{value:.4f}'}")
+        value = payload["mean"].get(metric)
+        if value is None and metric not in metric_names:
+            continue  # 本次没评这个指标，不打印
+        print(f"  {metric:26s} {'—' if value is None else f'{value:.4f}'}")
     if payload.get("failures"):
         print(f"\n⚠ 有 {len(payload['failures'])} 个指标评估失败（已记入 {META_FILE}）：")
         for failure in payload["failures"]:

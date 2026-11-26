@@ -17,14 +17,15 @@ BGE 系列模型，生成用 llama.cpp，评估用 RAGAS（裁判也是本地模
 
 | 指标 | baseline（纯向量） | hybrid（+BM25/RRF） | rerank（+精排） |
 |---|---|---|---|
-| faithfulness | 0.4674 | 0.5290 | **0.7329** |
-| answer_relevancy | 0.3782 | 0.5778 | **0.7136** |
-| context_precision | 0.6063 | 0.7745 | **0.8464** |
-| context_recall | 0.7826 | 0.9348 | **0.9565** |
-| 参考块命中 | 11/23 | 19/23 | **20/23** |
-| 拒答数 | 11 | 5 | **3** |
+| faithfulness | 0.5507 | 0.5303 | **0.8043** |
+| answer_relevancy | 0.6068 | 0.6726 | **0.7137** |
+| context_precision | 0.5922 | 0.7873 | **0.8380** |
+| context_recall | 0.8043 | 1.0000 | 1.0000 |
+| id_based_context_recall | 0.4783 | 0.7826 | **0.8696** |
+| 拒答数 | 5 | 3 | **1** |
 
-harness 无关的两个硬指标（不经 LLM 裁判）也同向改善，说明提升不是评分偏差。
+两个不经 LLM 裁判的硬指标也同向改善，说明提升不是评分偏差：
+`id_based_context_recall` 直接比对 chunk_id，与人工数的「参考块命中」完全一致。
 
 ## 架构
 
@@ -173,6 +174,40 @@ python -m app.eval.ragas_eval --input data/eval_results/rerank_records.json
 python -m app.eval.ragas_eval --compare data/eval_results
 ```
 
+#### 五个指标，其中一个是零成本的
+
+| 指标 | 输入 | 算多少 LLM 调用 | 衡量什么 |
+|---|---|---|---|
+| `faithfulness` | answer + contexts | 2（拆陈述 + NLI） | 答案是否都有资料支撑 |
+| `answer_relevancy` | answer | 3（正反向生成问题） | 答案是否切题 |
+| `context_precision` | question + reference + 每条 context | N=5（每条一次） | 有用的资料是否排在前面 |
+| `context_recall` | reference + contexts | 1（标准答案逐句归因） | 事实是否被召回 |
+| `id_based_context_recall` | chunk_id 两列 | **0** | 参考块是否被召回 |
+
+**为什么加第五个。** 实测 `context_recall` 在 hybrid / rerank 上恒为 1.0（23/23 满分），
+已经无法区分阶段——标准答案多是单句单事实，加上 3B 裁判偏「Yes」。
+`id_based_context_recall` 直接比对 chunk_id 集合，不经过裁判：
+
+```text
+baseline 11/23 = 0.4783   hybrid 18/23 = 0.7826   rerank 20/23 = 0.8696
+```
+
+与手工数出来的「参考块命中」完全一致，且能拉开 hybrid 和 rerank 的差距。
+
+#### 两个常用参数
+
+```bash
+# 只补算 id 召回（秒级），并合并进已有结果，不重跑要裁判的四个指标
+python -m app.eval.ragas_eval --input data/eval_results/rerank_records.json \
+       --metrics id_based_context_recall --merge
+
+# 只跑指定指标
+python -m app.eval.ragas_eval --input ... --metrics faithfulness,context_precision
+```
+
+`--merge` 按行序对齐已有结果文件（同一条 records、同一顺序），行数不一致会放弃合并并打印提示。
+合并记录的 `merge_history` 会写进结果 JSON，便于追溯哪些指标是哪次补算的。
+
 ## 设计取舍
 
 **为什么 RRF 权重是 (1.0, 3.0)。** 财报问题里精确 token（金额、比率、编号）
@@ -218,7 +253,7 @@ python -m app.eval.ragas_eval --compare data/eval_results
 ## 测试
 
 ```bash
-python -m pytest app -q      # 27 个用例，约 15 秒
+python -m pytest app -q      # 66 个用例，约 5 秒
 ```
 
 降级与追踪的用例全部使用桩对象，不加载模型，可在没有 GPU/数据库的机器上运行。

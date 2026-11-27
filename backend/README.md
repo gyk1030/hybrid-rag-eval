@@ -174,19 +174,21 @@ python -m app.eval.ragas_eval --input data/eval_results/rerank_records.json
 python -m app.eval.ragas_eval --compare data/eval_results
 ```
 
-#### 五个指标，其中一个是零成本的
+#### 四个默认指标 + 一个可选的历史指标
 
-| 指标 | 输入 | 算多少 LLM 调用 | 衡量什么 |
-|---|---|---|---|
-| `faithfulness` | answer + contexts | 2（拆陈述 + NLI） | 答案是否都有资料支撑 |
-| `answer_relevancy` | answer | 3（正反向生成问题） | 答案是否切题 |
-| `context_precision` | question + reference + 每条 context | N=5（每条一次） | 有用的资料是否排在前面 |
-| `context_recall` | reference + contexts | 1（标准答案逐句归因） | 事实是否被召回 |
-| `id_based_context_recall` | chunk_id 两列 | **0** | 参考块是否被召回 |
+| 指标 | 输入 | 算多少 LLM 调用 | 衡量什么 | 是否默认 |
+|---|---|---|---|---|
+| `faithfulness` | answer + contexts | 2（拆陈述 + NLI） | 答案是否都有资料支撑 | ✓ |
+| `answer_relevancy` | answer | 3（正反向生成问题） | 答案是否切题 | ✓ |
+| `context_precision` | question + reference + 每条 context | N=5（每条一次） | 有用的资料是否排在前面 | ✓ |
+| `id_based_context_recall` | chunk_id 两列 | **0** | 参考块是否被召回 | ✓ |
+| `context_recall` | reference + contexts | 1（标准答案逐句归因） | 事实是否被召回 | ✗ 已饱和 |
 
-**为什么加第五个。** 实测 `context_recall` 在 hybrid / rerank 上恒为 1.0（23/23 满分），
-已经无法区分阶段——标准答案多是单句单事实，加上 3B 裁判偏「Yes」。
-`id_based_context_recall` 直接比对 chunk_id 集合，不经过裁判：
+**为什么关掉 `context_recall`。** 实测它在 hybrid / rerank 上恒为 1.0（23/23 满分），
+已经无法区分阶段——标准答案多是单句单事实，加上 3B 裁判偏「Yes」。留着只会每题多花
+1 次裁判调用。需要与历史结果对齐时用 `--metrics` 显式加回来。
+
+**为什么换成 id 基召回。** `id_based_context_recall` 直接比对 chunk_id 集合，不经过裁判：
 
 ```text
 baseline 11/23 = 0.4783   hybrid 18/23 = 0.7826   rerank 20/23 = 0.8696
@@ -197,12 +199,16 @@ baseline 11/23 = 0.4783   hybrid 18/23 = 0.7826   rerank 20/23 = 0.8696
 #### 两个常用参数
 
 ```bash
-# 只补算 id 召回（秒级），并合并进已有结果，不重跑要裁判的四个指标
+# 只补算 id 召回（秒级），并合并进已有结果，不重跑其他指标
 python -m app.eval.ragas_eval --input data/eval_results/rerank_records.json \
        --metrics id_based_context_recall --merge
 
 # 只跑指定指标
 python -m app.eval.ragas_eval --input ... --metrics faithfulness,context_precision
+
+# 需要与 2026-11 之前的历史结果对齐（那时 context_recall 是默认指标）
+python -m app.eval.ragas_eval --input ... \
+       --metrics faithfulness,answer_relevancy,context_precision,context_recall,id_based_context_recall
 ```
 
 `--merge` 按行序对齐已有结果文件（同一条 records、同一顺序），行数不一致会放弃合并并打印提示。

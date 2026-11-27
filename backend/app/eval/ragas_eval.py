@@ -42,10 +42,7 @@ from app.config import (  # noqa: E402
     LLM_TIMEOUT,
 )
 
-# 五个指标：
-# - 前四个是 RAGAS 的经典指标，都要调裁判 LLM；
-# - id_based_context_recall 直接比对 chunk_id，零 LLM 调用，用来补 context_recall
-#   饱和后的区分度（实测 context_recall 在 hybrid/rerank 上恒为 1.0）。
+# 全部可用的指标（结果文件与 --compare 按这个顺序展示）
 METRIC_NAMES = [
     "faithfulness",
     "answer_relevancy",
@@ -53,8 +50,16 @@ METRIC_NAMES = [
     "context_recall",
     "id_based_context_recall",
 ]
-# 默认启用的指标（可用 --metrics 覆盖）
-DEFAULT_METRICS = METRIC_NAMES
+
+# 默认启用的指标：**不含 context_recall**。
+# 实测它在 hybrid / rerank 上恒为 1.0（23/23 满分），已经饱和、无法区分阶段；
+# 但它每题还要多花 1 次裁判调用。需要与历史结果对齐时用 --metrics 显式加回来。
+DEFAULT_METRICS = [
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "id_based_context_recall",
+]
 META_FILE = "eval_meta.jsonl"
 
 
@@ -437,9 +442,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--metrics",
         help=(
-            "逗号分隔的指标名，默认全部："
+            "逗号分隔的指标名，默认："
+            + ",".join(DEFAULT_METRICS)
+            + "。可选值："
             + ",".join(METRIC_NAMES)
-            + "。只想看召回质量时可用 --metrics id_based_context_recall（零 LLM 调用）"
+            + "（其中 context_recall 已饱和，默认关闭；id_based_context_recall 零 LLM 调用）"
         ),
     )
     parser.add_argument(
@@ -483,6 +490,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"stage={stage}  样本={len(records)}  指标={len(metric_names)} 个  "
         f"裁判={LLM_MODEL} @ {LLM_BASE_URL}"
     )
+    if not args.metrics and "context_recall" not in metric_names:
+        # 默认不跑饱和指标，但要说清楚，免得和旧结果比时以为少了什么
+        print(
+            "  提示：context_recall 已移出默认集（实测恒为 1.0，已饱和）；"
+            "与历史结果对齐时加 --metrics " + ",".join(METRIC_NAMES)
+        )
     payload = run_eval(records, metric_names)
     if args.merge:
         payload = merge_with_existing(payload, output)

@@ -16,6 +16,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.eval.ragas_eval import (  # noqa: E402
+    DEFAULT_METRICS,
+    METRIC_NAMES,
     build_dataset,
     make_metrics,
     merge_with_existing,
@@ -100,6 +102,25 @@ def test_make_metrics_selects_subset():
 def test_make_metrics_rejects_unknown():
     with pytest.raises(SystemExit):
         make_metrics(["not_a_metric"])
+
+
+def test_default_metrics_exclude_saturated_recall():
+    """context_recall 实测恒为 1.0、已饱和，默认不再消耗裁判调用。"""
+    assert "context_recall" not in DEFAULT_METRICS
+    assert "id_based_context_recall" in DEFAULT_METRICS
+
+
+def test_saturated_recall_still_selectable():
+    """需要与历史结果对齐时，仍可显式启用。"""
+    assert "context_recall" in METRIC_NAMES
+    metrics = make_metrics(["context_recall"])
+    assert [m.name for m in metrics] == ["context_recall"]
+
+
+def test_default_metrics_are_valid():
+    """默认集里的每个名字都必须存在于可选集合中。"""
+    assert set(DEFAULT_METRICS) <= set(METRIC_NAMES)
+    assert len(make_metrics()) == len(DEFAULT_METRICS)
 
 
 # --------------------------------------------------------------------------- #

@@ -128,18 +128,25 @@ def make_retriever(
 # 采集
 # --------------------------------------------------------------------------- #
 def generate_answer(question: str, hits: Sequence[Any]) -> dict[str, Any]:
-    """把 hits 组装成提示词并生成答案——三阶段共用，保证提示词完全一致。"""
+    """把 hits 组装成提示词并生成答案——三阶段共用，保证提示词完全一致。
+
+    生成后顺手跑一次年份校验（确定性，不调模型）。评测链路走的是**裸模型**，
+    不过线上那层告警；这里把校验结果记进 records，用来统计「有多少题其实会被拦下」。
+    """
     from app.generation.answer import build_contexts, build_messages
+    from app.generation.consistency import check_year_consistency
 
     contexts = build_contexts(hits)
     messages = build_messages(question, contexts)
     answer, usage = call_llm(messages)
+    check = check_year_consistency(question, answer, contexts)
     return {
         "answer": answer,
         "contexts": [ctx.text for ctx in contexts],
         "context_chunk_ids": [ctx.chunk_id for ctx in contexts],
         "usage": usage,
         "messages": messages,
+        "answer_check": check.to_dict(),
     }
 
 
@@ -232,14 +239,18 @@ def run_stage(
             "retrieval_ms": round(retrieval_ms, 1),
             "generation_ms": round(generation_ms, 1),
             "usage": payload["usage"],
+            # 年份校验：线上靠它弹告警，评测里用来统计「多少题其实会被拦下」
+            "answer_check": payload.get("answer_check"),
             "failed": False,
         }
         if recorder is not None:
             record["trace"] = recorder.to_dict()
         records.append(record)
+        check = payload.get("answer_check") or {}
+        flag = "  ⚠ 年份不符" if check.get("status") == "mismatch" else ""
         print(
             f"[{position}/{total}] {question[:40]}…  检索 {retrieval_ms:.0f}ms "
-            f"生成 {generation_ms:.0f}ms  答案 {len(payload['answer'])} 字"
+            f"生成 {generation_ms:.0f}ms  答案 {len(payload['answer'])} 字{flag}"
         )
         if on_record is not None:
             on_record(records)
@@ -321,6 +332,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"检索合计 {total_retrieval / 1000:.1f}s，生成合计 {total_generation / 1000:.1f}s "
         f"→ {output.as_posix()}"
     )
+
+    # 年份校验汇总：这是「裸模型」的出错率，线上会被 answer_check 拦下
+    checks = [r.get("answer_check") or {} for r in records if not r.get("failed")]
+    mismatch = [r for r, c in zip(records, checks) if c.get("status") == "mismatch"]
+    ok_count = sum(1 for c in checks if c.get("status") == "ok")
+    skipped = sum(1 for c in checks if c.get("status") == "skipped")
+    if checks:
+        print(
+            f"年份校验：通过 {ok_count} / 不符 {len(mismatch)} / 跳过 {skipped}"
+            f"（共 {len(checks)} 条）"
+        )
+        for record in mismatch:
+            detail = (record.get("answer_check") or {}).get("detail", "")
+            print(f"  ⚠ {record.get('id')} {record['question'][:32]}… —— {detail}")
+
     if failed:
         print(f"其中 {len(failed)} 条失败（已写入 records，评分时会因空上下文得低分）：")
         for record in failed:

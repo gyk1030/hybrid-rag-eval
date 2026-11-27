@@ -174,6 +174,16 @@ python -m app.eval.ragas_eval --input data/eval_results/rerank_records.json
 python -m app.eval.ragas_eval --compare data/eval_results
 ```
 
+采集阶段会顺带跑一次**年份校验**（纯规则、不调模型），结果写进每条的 `answer_check`，
+并在结束时打印汇总：
+
+```text
+年份校验：通过 20 / 不符 2 / 跳过 1（共 23 条）
+  ⚠ gs_007 2023 年末，平安银行个人贷款不良率是多少？… —— 问题问的是 2023 年，但答案的数值来自 2024 年报（参考资料 4）
+```
+
+这个数字是**裸模型的出错率**：评测链路不经过线上的告警与兜底，所以能看出线上会被拦下多少题。
+
 #### 四个默认指标 + 一个可选的历史指标
 
 | 指标 | 输入 | 算多少 LLM 调用 | 衡量什么 | 是否默认 |
